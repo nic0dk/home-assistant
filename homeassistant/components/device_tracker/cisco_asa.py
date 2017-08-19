@@ -1,8 +1,8 @@
 
 """
-Support for Cisco IOS Routers.
+Support for Cisco ASA Routers.
 For more details about this platform, please refer to the documentation at
-https://home-assistant.io/components/device_tracker.cisco_ios/
+https://home-assistant.io/components/device_tracker.cisco_asa/
 """
 import logging
 
@@ -36,7 +36,7 @@ def get_scanner(hass, config):
 
 
 class CiscoDeviceScanner(DeviceScanner):
-    """This class queries a wireless router running Cisco IOS firmware."""
+    """This class queries a router running Cisco ASA firmware."""
 
     def __init__(self, config):
         """Initialize the scanner."""
@@ -48,7 +48,7 @@ class CiscoDeviceScanner(DeviceScanner):
         self.last_results = {}
 
         self.success_init = self._update_info()
-        _LOGGER.info('cisco_ios scanner initialized')
+        _LOGGER.info('cisco_asa scanner initialized')
 
     # pylint: disable=no-self-use
     def get_device_name(self, device):
@@ -74,21 +74,18 @@ class CiscoDeviceScanner(DeviceScanner):
 
             lines_result = string_result.splitlines()
 
-            # Remove the first two lines, as they contains the arp command
-            # and the arp table titles e.g.
+            # Remove the first line, as that contains the arp command
             # show ip arp
-            # Protocol  Address | Age (min) | Hardware Addr | Type | Interface
-            lines_result = lines_result[2:]
+            lines_result = lines_result[1:]
 
             for line in lines_result:
                 parts = line.split()
-                if len(parts) != 6:
+                if len(parts) != 4:
                     continue
 
-                # ['Internet', '10.10.11.1', '-', '0027.d32d.0123', 'ARPA',
-                # 'GigabitEthernet0']
-                age = parts[2]
-                hw_addr = parts[3]
+                #  ['inside', 'NAS', '0008.9bc6.4c80', '5']
+                age = parts[3]
+                hw_addr = parts[2]
 
                 if age != "-":
                     mac = _parse_cisco_mac_address(hw_addr)
@@ -122,7 +119,7 @@ class CiscoDeviceScanner(DeviceScanner):
             cisco_ssh.sendline("terminal length 0")
             cisco_ssh.prompt(1)
 
-            cisco_ssh.sendline("show ip arp")
+            cisco_ssh.sendline("show arp")
             cisco_ssh.prompt(1)
 
             devices_result = cisco_ssh.before
